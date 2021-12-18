@@ -2,8 +2,11 @@ name: Rust
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ main ]
+    inputs:
+      tag:
+        description: 'Tag'     
+        required: true
+        default: 'v0.0.0'
 
 env:
   CARGO_TERM_COLOR: always
@@ -13,7 +16,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+    - uses: actions/cache@v2
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: cargo-${{ hashFiles('**/Cargo.lock') }}
     - name: Build
-      run: cargo build --verbose
+      run: cargo build --release
+    - name: Stripping binary
+      run: strip ./target/release/currently-playing-spotify
+    - name: Compressing binary (UPX)
+      uses: crazy-max/ghaction-upx@v1
+      with:
+        version: latest
+        files: ./target/release/currently-playing-spotify
+        args: --best --lzma
     - name: Release
       uses: softprops/action-gh-release@v1
+      with:
+        tagName: ${{ github.event.inputs.tag }}
+        files: ./target/release/currently-playing-spotify

@@ -1,54 +1,100 @@
 use awc::{error::SendRequestError, Client};
 use chrono::{DateTime, Duration, Utc};
+use log::{error, info, warn};
 use serde::Deserialize;
-use std::env;
 
-use crate::song::Song;
+use crate::{song::Song, utils::env};
 
+#[derive(Clone)]
 pub struct SpotifyAuth {
-    client: Client,
+    auth_code: String,
     expires_in: i64,
     fetched: DateTime<Utc>,
-    refresh_token: String,
-    access_token: String,
+    refresh_token: Option<String>,
+    access_token: Option<String>,
     client_id: String,
     client_secret: String,
+}
+
+#[derive(Deserialize)]
+struct SpotifyAuthCodeResponse {
+    access_token: String,
+    expires_in: i64,
+    refresh_token: String,
 }
 
 #[derive(Deserialize)]
 struct SpotifyAuthResponse {
     access_token: String,
     expires_in: i64,
-    refresh_token: String,
 }
 
 impl SpotifyAuth {
-    pub fn new() -> SpotifyAuth {
-        SpotifyAuth {
-            client: Client::new(),
+    pub async fn new() -> SpotifyAuth {
+        let mut auth = SpotifyAuth {
+            auth_code: env("SPOTIFY_AUTH_CODE"),
             expires_in: 0,
             fetched: Utc::now(),
-            access_token: env::var("SPOTIFY_ACCESS_TOKEN").expect("SPOTIFY_ACCESS_TOKEN not set"),
-            refresh_token: env::var("SPOTIFY_REFRESH_TOKEN")
-                .expect("SPOTIFY_REFRESH_TOKEN not set"),
-            client_id: env::var("SPOTIFY_CLIENT_ID").expect("SPOTIFY_CLIENT_ID not set"),
-            client_secret: env::var("SPOTIFY_CLIENT_SECRET")
-                .expect("SPOTIFY_CLIENT_SECRET not set"),
-        }
+            access_token: None,
+            refresh_token: None,
+            client_id: env("SPOTIFY_CLIENT_ID"),
+            client_secret: env("SPOTIFY_CLIENT_SECRET"),
+        };
+
+        auth.get_auth_tokens().await;
+
+        auth
     }
 
     fn should_get_new_access_token(&self) -> bool {
         (self.fetched + Duration::seconds(self.expires_in)) > Utc::now()
     }
 
+    async fn get_auth_tokens(&mut self) {
+        info!("Querying Spotify auth tokens API");
+
+        let response = Client::new()
+            .post("https://accounts.spotify.com/api/token")
+            .basic_auth(self.client_id.clone(), self.client_secret.clone())
+            .send_form(&[
+                ("redirect_uri", "http://localhost:8888/callback"),
+                ("grant_type", "authorization_code"),
+                ("code", &self.auth_code),
+            ])
+            .await;
+
+        match response {
+            Ok(mut data) => {
+                let data = data.json::<SpotifyAuthCodeResponse>().await.unwrap();
+
+                self.access_token = Some(data.access_token);
+                self.refresh_token = Some(data.refresh_token);
+                self.expires_in = data.expires_in;
+                self.fetched = Utc::now();
+            }
+            Err(error) => {
+                error!("Error querying Spotify auth tokens API: {:?}", error);
+            }
+        };
+    }
+
     async fn get_new_access_token(&mut self) {
-        let response = self
-            .client
-            .get("https://accounts.spotify.com/api/token")
+        let refresh_token = match self.refresh_token.clone() {
+            Some(token) => token,
+            None => {
+                warn!("Not querying Spotify access token auth API, no refresh token saved");
+                return;
+            }
+        };
+
+        info!("Querying Spotify access token auth API");
+
+        let response = Client::new()
+            .post("https://accounts.spotify.com/api/token")
             .basic_auth(self.client_id.clone(), self.client_secret.clone())
             .send_form(&[
                 ("grant_type", "refresh_token"),
-                ("refresh_token", self.refresh_token.as_str()),
+                ("refresh_token", &refresh_token),
             ])
             .await;
 
@@ -56,34 +102,49 @@ impl SpotifyAuth {
             Ok(mut data) => {
                 let data = data.json::<SpotifyAuthResponse>().await.unwrap();
 
-                self.access_token = data.access_token;
-                self.refresh_token = data.refresh_token;
+                self.access_token = Some(data.access_token);
                 self.expires_in = data.expires_in;
                 self.fetched = Utc::now();
             }
             Err(error) => {
-                dbg!(error);
+                error!("Error querying Spotify access token auth API: {:?}", error);
             }
         };
     }
 
     async fn currently_playing_request(&self) -> Result<Song, SendRequestError> {
-        let response = self
-            .client
+        info!("Querying Spotify currently playing track API");
+
+        let access_token = match self.access_token.clone() {
+            Some(token) => token,
+            None => {
+                error!("Access token does not exist");
+                return Ok(Song::new(None));
+            }
+        };
+
+        let response = Client::new()
             .get("https://api.spotify.com/v1/me/player/currently-playing")
-            .insert_header((
-                "Authorization",
-                format!("Bearer {}", self.access_token.clone()),
-            ))
+            .insert_header(("Authorization", format!("Bearer {}", access_token)))
             .send()
             .await;
 
         match response {
-            Ok(mut data) => Ok(Song::new(
-                serde_json::from_slice(&data.body().await.unwrap()).unwrap(),
-            )),
+            Ok(mut data) => match serde_json::from_slice(&data.body().await.unwrap()) {
+                Ok(data) => {
+                    info!("User is currently playing music");
+                    Ok(Song::new(Some(data)))
+                }
+                _ => {
+                    info!("User NOT currently playing music");
+                    Ok(Song::new(None))
+                }
+            },
             Err(error) => {
-                dbg!(&error);
+                error!(
+                    "Error querying Spotify currently playing track API: {:?}",
+                    error
+                );
                 Err(error)
             }
         }
@@ -96,12 +157,11 @@ impl SpotifyAuth {
 
         match self.currently_playing_request().await {
             Ok(song) => Some(song),
-            Err(_) => {
-                // TODO: Maybe the error is because we need a new access token (although I don't think this would trigger this error - maybe need to do some error checking in the response)
+            _ => {
                 self.get_new_access_token().await;
                 match self.currently_playing_request().await {
                     Ok(song) => Some(song),
-                    Err(_) => None,
+                    _ => None,
                 }
             }
         }

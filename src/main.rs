@@ -9,18 +9,19 @@ use crate::song::Song;
 mod auth;
 mod routes;
 mod song;
+mod utils;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
 
-    HttpServer::new(|| {
-        let currently_playing: web::Data<Mutex<Option<Song>>> = web::Data::new(Mutex::new(None));
-        let spotify_auth = web::Data::new(Mutex::new(SpotifyAuth::new()));
+    let currently_playing: web::Data<Mutex<Option<Song>>> = web::Data::new(Mutex::new(None));
+    let spotify_auth = web::Data::new(Mutex::new(SpotifyAuth::new().await));
 
+    HttpServer::new(move || {
         App::new()
-            .app_data(currently_playing)
-            .app_data(spotify_auth)
+            .app_data(currently_playing.clone())
+            .app_data(spotify_auth.clone())
             .wrap(Logger::default())
             .wrap(Logger::new("%a %{User-Agent}i"))
             .service(routes::index)

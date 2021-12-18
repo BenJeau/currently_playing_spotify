@@ -1,4 +1,5 @@
 use actix_web::{get, web, Responder};
+use log::info;
 use std::sync::Mutex;
 
 use crate::{auth::SpotifyAuth, song::Song};
@@ -12,10 +13,13 @@ pub async fn index(
     let mut spotify_auth = spotify_auth.lock().unwrap();
 
     let song = match currently_playing.as_ref() {
-        Some(song) if song.is_valid() => song.clone(),
+        Some(song) if song.is_valid() => {
+            info!("Returning cached value");
+            Some(song.clone())
+        }
         _ => {
-            let song = spotify_auth.query_currently_playing().await.unwrap();
-            *currently_playing = Some(song.clone());
+            let song = spotify_auth.query_currently_playing().await;
+            *currently_playing = song.clone();
             song
         }
     };
