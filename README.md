@@ -1,17 +1,17 @@
 # spotify-currently-playing
 
-Simple Rust HTTP proxy server using Actix to know what track the specified user is currently listening. Server caching is used keeping the latest song in memory to not overload the Spotify's REST API.
+Simple Rust websocket proxy server using Actix to know what track the specified user is currently listening. Server caching is used keeping the latest song in memory to not overload the Spotify's REST API.
 
 ## Usage
 
 Call the binary with the required parameters to the binary, to learn more about the parameters use `--help` or `-h` or look at the table below. 
 
-| Parameter name    | Environment name        | Required              | Description                                                                                                                            |
-| ----------------- | ----------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `--interval`      | `INTERVAL_QUERY_SECS`   | No (defaults to `1`) | Maximum interval in seconds which the Spotify API will be called. Requests made during the interval will return the cached result.     |
-| `--auth-code`     | `SPOTIFY_AUTH_CODE`     | Yes                   | Authentication code from the Spotify user taken from the Authentication authentication flow (learn more [below](#authentication-code)) |
-| `--client-id`     | `SPOTIFY_CLIENT_ID`     | Yes                   | Spotify application client id (learn more [below](#client-id-and-secret))                                                              |
-| `--client-secret` | `SPOTIFY_CLIENT_SECRET` | Yes                   | Spotify application client secret (learn more [below](#client-id-and-secret))                                                          |
+| Parameter name    | Environment name        | Required             | Description                                                                                                                            |
+| ----------------- | ----------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `--interval`      | `INTERVAL_QUERY_SECS`   | No (defaults to `2`) | Maximum interval in seconds which the Spotify API will be called                                                                       |
+| `--auth-code`     | `SPOTIFY_AUTH_CODE`     | Yes                  | Authentication code from the Spotify user taken from the Authentication authentication flow (learn more [below](#authentication-code)) |
+| `--client-id`     | `SPOTIFY_CLIENT_ID`     | Yes                  | Spotify application client id (learn more [below](#client-id-and-secret))                                                              |
+| `--client-secret` | `SPOTIFY_CLIENT_SECRET` | Yes                  | Spotify application client secret (learn more [below](#client-id-and-secret))                                                          |
 
 ## Developing
 

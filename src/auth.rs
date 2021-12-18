@@ -1,7 +1,8 @@
-use awc::{error::SendRequestError, Client};
 use chrono::{DateTime, Utc};
 use log::{error, info, warn};
 use serde::Deserialize;
+use std::time::Duration;
+use tokio::{sync::watch::Sender, time::interval};
 
 use crate::{song::Song, utils::has_time_passed};
 
@@ -9,7 +10,6 @@ use crate::{song::Song, utils::has_time_passed};
 pub struct SpotifyAuth {
     auth_code: String,
     expires_in: i64,
-    pub interval: i64,
     fetched: DateTime<Utc>,
     refresh_token: Option<String>,
     access_token: Option<String>,
@@ -31,16 +31,10 @@ struct SpotifyAuthResponse {
 }
 
 impl SpotifyAuth {
-    pub async fn new(
-        auth_code: String,
-        interval: i64,
-        client_id: String,
-        client_secret: String,
-    ) -> SpotifyAuth {
+    pub async fn new(auth_code: String, client_id: String, client_secret: String) -> SpotifyAuth {
         let mut auth = SpotifyAuth {
             auth_code,
             expires_in: 0,
-            interval,
             fetched: Utc::now(),
             access_token: None,
             refresh_token: None,
@@ -60,27 +54,23 @@ impl SpotifyAuth {
     async fn get_auth_tokens(&mut self) {
         info!("Querying Spotify auth tokens API");
 
-        let response = Client::new()
+        let response = reqwest::Client::new()
             .post("https://accounts.spotify.com/api/token")
-            .basic_auth(self.client_id.clone(), self.client_secret.clone())
-            .send_form(&[
+            .basic_auth(self.client_id.clone(), Some(self.client_secret.clone()))
+            .form(&[
                 ("redirect_uri", "http://localhost:8888/callback"),
                 ("grant_type", "authorization_code"),
                 ("code", &self.auth_code),
             ])
+            .send()
             .await;
 
         match response {
-            Ok(mut data) => {
+            Ok(data) => {
                 let data = match data.json::<SpotifyAuthCodeResponse>().await {
                     Ok(auth) => auth,
                     Err(err) => {
-                        error!(
-                            "Invalid authorization code, Spotify API status {:?} and response: {:?}",
-                            data.status(),
-                            data.body().await,
-                        );
-                        panic!("{:?}", err);
+                        panic!("Invalid authorization code: {:?}", err);
                     }
                 };
 
@@ -106,17 +96,18 @@ impl SpotifyAuth {
 
         info!("Querying Spotify access token auth API");
 
-        let response = Client::new()
+        let response = reqwest::Client::new()
             .post("https://accounts.spotify.com/api/token")
-            .basic_auth(self.client_id.clone(), self.client_secret.clone())
-            .send_form(&[
+            .basic_auth(self.client_id.clone(), Some(self.client_secret.clone()))
+            .form(&[
                 ("grant_type", "refresh_token"),
                 ("refresh_token", &refresh_token),
             ])
+            .send()
             .await;
 
         match response {
-            Ok(mut data) => {
+            Ok(data) => {
                 let data = data.json::<SpotifyAuthResponse>().await.unwrap();
 
                 self.access_token = Some(data.access_token);
@@ -129,7 +120,7 @@ impl SpotifyAuth {
         };
     }
 
-    async fn currently_playing_request(&self) -> Result<Song, SendRequestError> {
+    async fn currently_playing_request(&self) -> Result<Song, reqwest::Error> {
         info!("Querying Spotify currently playing track API");
 
         let access_token = match self.access_token.clone() {
@@ -140,14 +131,14 @@ impl SpotifyAuth {
             }
         };
 
-        let response = Client::new()
+        let response = reqwest::Client::new()
             .get("https://api.spotify.com/v1/me/player/currently-playing")
-            .insert_header(("Authorization", format!("Bearer {}", access_token)))
+            .header("Authorization", format!("Bearer {}", access_token))
             .send()
             .await;
 
         match response {
-            Ok(mut data) => match serde_json::from_slice(&data.body().await.unwrap()) {
+            Ok(data) => match serde_json::from_str(&data.text().await.unwrap()) {
                 Ok(data) => {
                     info!("User is currently playing music");
                     Ok(Song::new(Some(data)))
@@ -182,5 +173,20 @@ impl SpotifyAuth {
                 }
             }
         }
+    }
+}
+
+pub async fn query_periodically_spotify_api(
+    interval_time: u64,
+    mut spotify_auth: SpotifyAuth,
+    tx: Sender<String>,
+) {
+    let mut query_interval = interval(Duration::from_secs(interval_time));
+
+    loop {
+        let song = spotify_auth.query_currently_playing().await;
+
+        let _ = tx.send(serde_json::to_string(&song).unwrap());
+        query_interval.tick().await;
     }
 }
