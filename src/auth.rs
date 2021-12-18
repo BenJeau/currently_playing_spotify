@@ -1,14 +1,15 @@
 use awc::{error::SendRequestError, Client};
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
 use log::{error, info, warn};
 use serde::Deserialize;
 
-use crate::{song::Song, utils::env};
+use crate::{song::Song, utils::has_time_passed};
 
 #[derive(Clone)]
 pub struct SpotifyAuth {
     auth_code: String,
     expires_in: i64,
+    pub interval: i64,
     fetched: DateTime<Utc>,
     refresh_token: Option<String>,
     access_token: Option<String>,
@@ -30,15 +31,21 @@ struct SpotifyAuthResponse {
 }
 
 impl SpotifyAuth {
-    pub async fn new() -> SpotifyAuth {
+    pub async fn new(
+        auth_code: String,
+        interval: i64,
+        client_id: String,
+        client_secret: String,
+    ) -> SpotifyAuth {
         let mut auth = SpotifyAuth {
-            auth_code: env("SPOTIFY_AUTH_CODE"),
+            auth_code,
             expires_in: 0,
+            interval,
             fetched: Utc::now(),
             access_token: None,
             refresh_token: None,
-            client_id: env("SPOTIFY_CLIENT_ID"),
-            client_secret: env("SPOTIFY_CLIENT_SECRET"),
+            client_id,
+            client_secret,
         };
 
         auth.get_auth_tokens().await;
@@ -47,7 +54,7 @@ impl SpotifyAuth {
     }
 
     fn should_get_new_access_token(&self) -> bool {
-        (self.fetched + Duration::seconds(self.expires_in)) > Utc::now()
+        has_time_passed(self.fetched, self.expires_in)
     }
 
     async fn get_auth_tokens(&mut self) {
@@ -65,7 +72,17 @@ impl SpotifyAuth {
 
         match response {
             Ok(mut data) => {
-                let data = data.json::<SpotifyAuthCodeResponse>().await.unwrap();
+                let data = match data.json::<SpotifyAuthCodeResponse>().await {
+                    Ok(auth) => auth,
+                    Err(err) => {
+                        error!(
+                            "Invalid authorization code, Spotify API status {:?} and response: {:?}",
+                            data.status(),
+                            data.body().await,
+                        );
+                        panic!("{:?}", err);
+                    }
+                };
 
                 self.access_token = Some(data.access_token);
                 self.refresh_token = Some(data.refresh_token);

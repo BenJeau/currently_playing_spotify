@@ -13,7 +13,7 @@ pub async fn index(
     let mut spotify_auth = spotify_auth.lock().unwrap();
 
     let song = match currently_playing.as_ref() {
-        Some(song) if song.is_valid() => {
+        Some(song) if song.is_valid(spotify_auth.interval) => {
             info!("Returning cached value");
             Some(song.clone())
         }

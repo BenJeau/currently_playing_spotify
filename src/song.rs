@@ -1,6 +1,7 @@
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
 use serde::Serialize;
-use std::env;
+
+use crate::utils::has_time_passed;
 
 #[derive(Serialize, Clone)]
 pub struct Song {
@@ -16,14 +17,7 @@ impl Song {
         }
     }
 
-    pub fn is_valid(&self) -> bool {
-        (Utc::now()
-            - Duration::seconds(
-                env::var("INTERVAL_QUERY_SECS")
-                    .unwrap_or("10".to_string())
-                    .parse::<i64>()
-                    .expect("INTERVAL_QUERY_SECS not a i64"),
-            ))
-            < self.fetched
+    pub fn is_valid(&self, interval: i64) -> bool {
+        !has_time_passed(self.fetched, interval)
     }
 }

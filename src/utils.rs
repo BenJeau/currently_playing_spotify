@@ -1,3 +1,5 @@
-pub fn env(name: &str) -> String {
-    std::env::var(name).expect(&format!("{} not set", name))
+use chrono::{DateTime, Duration, Utc};
+
+pub fn has_time_passed(time: DateTime<Utc>, seconds: i64) -> bool {
+    (time + Duration::seconds(seconds)) > Utc::now()
 }
