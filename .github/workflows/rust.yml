@@ -38,5 +38,5 @@ jobs:
     - name: Release
       uses: softprops/action-gh-release@v1
       with:
-        tagName: ${{ github.event.inputs.tag }}
+        tag_name: ${{ github.event.inputs.tag }}
         files: ./target/release/currently-playing-spotify
