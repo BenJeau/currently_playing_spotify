@@ -28,10 +28,12 @@ impl SpotifyAuth {
             client: Client::new(),
             expires_in: 0,
             fetched: Utc::now(),
-            access_token: env::var("SPOTIFY_ACCESS_TOKEN").unwrap(),
-            refresh_token: env::var("SPOTIFY_REFRESH_TOKEN").unwrap(),
-            client_id: env::var("SPOTIFY_CLIENT_ID").unwrap(),
-            client_secret: env::var("SPOTIFY_CLIENT_SECRET").unwrap(),
+            access_token: env::var("SPOTIFY_ACCESS_TOKEN").expect("SPOTIFY_ACCESS_TOKEN not set"),
+            refresh_token: env::var("SPOTIFY_REFRESH_TOKEN")
+                .expect("SPOTIFY_REFRESH_TOKEN not set"),
+            client_id: env::var("SPOTIFY_CLIENT_ID").expect("SPOTIFY_CLIENT_ID not set"),
+            client_secret: env::var("SPOTIFY_CLIENT_SECRET")
+                .expect("SPOTIFY_CLIENT_SECRET not set"),
         }
     }
 

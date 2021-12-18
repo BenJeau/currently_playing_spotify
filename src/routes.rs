@@ -1,5 +1,4 @@
 use actix_web::{get, web, Responder};
-use log::info;
 use std::sync::Mutex;
 
 use crate::{auth::SpotifyAuth, song::Song};

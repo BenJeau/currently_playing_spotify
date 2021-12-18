@@ -1,7 +1,6 @@
 use chrono::{DateTime, Duration, Utc};
 use serde::Serialize;
-
-use crate::INTERVAL_QUERY_SECS;
+use std::env;
 
 #[derive(Serialize, Clone)]
 pub struct Song {
@@ -18,6 +17,13 @@ impl Song {
     }
 
     pub fn is_valid(&self) -> bool {
-        (Utc::now() - Duration::seconds(INTERVAL_QUERY_SECS)) < self.fetched
+        (Utc::now()
+            - Duration::seconds(
+                env::var("INTERVAL_QUERY_SECS")
+                    .unwrap_or("10".to_string())
+                    .parse::<i64>()
+                    .expect("INTERVAL_QUERY_SECS not a i64"),
+            ))
+            < self.fetched
     }
 }
