@@ -1,4 +1,4 @@
-name: Rust
+name: CD - Create and deploy rust binary as Github release
 
 on:
   workflow_dispatch:
