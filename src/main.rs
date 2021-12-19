@@ -23,16 +23,24 @@ struct Opts {
     interval: u64,
 
     /// Authentication code from the Spotify user taken from the Authentication authentication flow
-    #[clap(short, long, env = "SPOTIFY_AUTH_CODE")]
+    #[clap(long, env = "SPOTIFY_AUTH_CODE")]
     auth_code: String,
 
     /// Spotify application client id
-    #[clap(alias = "id", long, env = "SPOTIFY_CLIENT_ID")]
+    #[clap(long, env = "SPOTIFY_CLIENT_ID")]
     client_id: String,
 
     /// Spotify application client secret
-    #[clap(short = 's', long, env = "SPOTIFY_CLIENT_SECRET")]
+    #[clap(long, env = "SPOTIFY_CLIENT_SECRET")]
     client_secret: String,
+
+    /// Websocket server port
+    #[clap(short, long, env = "WEBSOCKET_PORT", default_value = "8080")]
+    port: String,
+
+    /// Websocket server address
+    #[clap(short, long, env = "WEBSOCKET_ADDRESS", default_value = "0.0.0.0")]
+    address: String,
 }
 
 #[tokio::main]
@@ -44,6 +52,8 @@ async fn main() {
         auth_code,
         client_id,
         client_secret,
+        port,
+        address,
     } = Opts::parse();
 
     let (tx, rx) = watch::channel("".to_string());
@@ -52,10 +62,11 @@ async fn main() {
     tokio::task::spawn(query_periodically_spotify_api(interval, spotify_auth, tx));
     info!("Spawned background task querying Spotify's API");
 
-    let listener = TcpListener::bind(&config::WEBSOCKET_ADDR)
+    let websocket_addr = format!("{}:{}", address, port);
+    let listener = TcpListener::bind(&websocket_addr)
         .await
-        .expect("Failed to bind");
-    info!("Websocket listening on: {}", config::WEBSOCKET_ADDR);
+        .expect("Failed to bind to address");
+    info!("Websocket listening on: {}", websocket_addr);
 
     while let Ok((stream, addr)) = listener.accept().await {
         tokio::spawn(accept_connection(stream, addr, rx.clone()));
