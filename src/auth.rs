@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use log::{error, info, warn};
+use tracing::{error, info, warn};
 use serde::Deserialize;
 use std::time::Duration;
 use tokio::{sync::watch::Sender, time::interval};

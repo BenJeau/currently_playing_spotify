@@ -1,22 +1,34 @@
-use futures_util::{SinkExt, StreamExt};
-use log::{info, warn};
-use std::{net::SocketAddr, time::Instant};
-use tokio::{net::TcpStream, select, sync::watch::Receiver, time::interval};
-use tokio_tungstenite::tungstenite::{self, Message};
+use axum::{
+    extract::{
+        ws::{Message, WebSocket},
+        Extension, TypedHeader, WebSocketUpgrade,
+    },
+    headers::UserAgent,
+    response::IntoResponse,
+};
+use futures_util::StreamExt;
+use std::time::Instant;
+use tokio::{select, sync::watch::Receiver, time::interval};
+use tracing::{info, warn};
 
 use crate::config;
 
-pub async fn accept_connection(
-    stream: TcpStream,
-    addr: SocketAddr,
-    mut rx: Receiver<String>,
-) -> tungstenite::Result<()> {
-    info!("Establishing connection: {}", addr);
+pub async fn handler(
+    ws: WebSocketUpgrade,
+    user_agent: Option<TypedHeader<UserAgent>>,
+    Extension(rx): Extension<Receiver<String>>,
+) -> impl IntoResponse {
+    info!("Establishing connection: {:?}", user_agent);
 
-    let mut ws_stream = tokio_tungstenite::accept_async(stream)
-        .await
-        .expect("Error during the websocket handshake occurred");
-    info!("WebSocket connection established: {}", addr);
+    ws.on_upgrade(|socket| handle_socket(socket, user_agent, rx))
+}
+
+async fn handle_socket(
+    mut ws_stream: WebSocket,
+    user_agent: Option<TypedHeader<UserAgent>>,
+    mut rx: Receiver<String>,
+) -> Result<(), axum::Error> {
+    info!("Connection upgraded to WS connection: {:?}", user_agent);
 
     let mut heartbeat = Instant::now();
     let mut heartbeat_interval = interval(config::HEARTBEAT_INTERVAL);

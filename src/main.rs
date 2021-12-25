@@ -1,51 +1,31 @@
-use clap::Parser;
-use env_logger::Env;
-use log::info;
-use tokio::{net::TcpListener, sync::watch};
+use axum::{routing::get, AddExtensionLayer, Router};
+use clap::StructOpt;
+use tokio::sync::watch;
+use tower_http::trace::{DefaultMakeSpan, TraceLayer};
+use tracing::info;
 
 use crate::{
     auth::{query_periodically_spotify_api, SpotifyAuth},
-    connection::accept_connection,
+    connection::handler,
+    opts::Opts,
 };
 
 mod auth;
 mod config;
 mod connection;
+mod opts;
 mod song;
 mod utils;
 
-/// Simple Rust websocket proxy server using Actix to know what track the specified user is currently listening
-#[derive(Parser, Debug)]
-#[clap(version = "0.1.0", author = "Benoît J. <benoit@jeaurond.dev>")]
-struct Opts {
-    /// Maximum interval in seconds which the Spotify API will be called
-    #[clap(short, long, env = "INTERVAL_QUERY_SECS", default_value = "2")]
-    interval: u64,
-
-    /// Authentication code from the Spotify user taken from the Authentication authentication flow
-    #[clap(long, env = "SPOTIFY_AUTH_CODE")]
-    auth_code: String,
-
-    /// Spotify application client id
-    #[clap(long, env = "SPOTIFY_CLIENT_ID")]
-    client_id: String,
-
-    /// Spotify application client secret
-    #[clap(long, env = "SPOTIFY_CLIENT_SECRET")]
-    client_secret: String,
-
-    /// Websocket server port
-    #[clap(short, long, env = "WEBSOCKET_PORT", default_value = "8080")]
-    port: String,
-
-    /// Websocket server address
-    #[clap(short, long, env = "WEBSOCKET_ADDRESS", default_value = "0.0.0.0")]
-    address: String,
-}
-
 #[tokio::main]
 async fn main() {
-    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
+    if std::env::var_os("RUST_LOG").is_none() {
+        std::env::set_var(
+            "RUST_LOG",
+            "currently-playing-spotify=debug,tower_http=debug",
+        )
+    }
+    tracing_subscriber::fmt::init();
 
     let Opts {
         interval,
@@ -62,13 +42,18 @@ async fn main() {
     tokio::task::spawn(query_periodically_spotify_api(interval, spotify_auth, tx));
     info!("Spawned background task querying Spotify's API");
 
-    let websocket_addr = format!("{}:{}", address, port);
-    let listener = TcpListener::bind(&websocket_addr)
-        .await
-        .expect("Failed to bind to address");
-    info!("Websocket listening on: {}", websocket_addr);
+    let app = Router::new()
+        .route("/ws", get(handler))
+        .layer(AddExtensionLayer::new(rx))
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(DefaultMakeSpan::default().include_headers(true)),
+        );
 
-    while let Ok((stream, addr)) = listener.accept().await {
-        tokio::spawn(accept_connection(stream, addr, rx.clone()));
-    }
+    let addr = format!("{}:{}", address, port).parse().unwrap();
+    tracing::debug!("listening on {}", addr);
+    axum::Server::bind(&addr)
+        .serve(app.into_make_service())
+        .await
+        .unwrap();
 }
