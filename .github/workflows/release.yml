@@ -6,7 +6,7 @@ on:
       tag:
         description: 'Tag'     
         required: true
-        default: 'v0.0.0'
+        default: '0.0.0'
 
 env:
   CARGO_TERM_COLOR: always
@@ -35,8 +35,14 @@ jobs:
         version: latest
         files: ./target/release/currently-playing-spotify
         args: --best --lzma
+    - name: Update and commit Cargo.toml with new version
+      run: |
+        sed -i 's/^version.*/version = "${{ github.event.inputs.tag }}"/' ./Cargo.toml
+        git add Cargo.toml
+        git commit -m "chore: updated Cargo.toml to ${{ github.event.inputs.tag }}"
+        git push
     - name: Release
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: ${{ github.event.inputs.tag }}
+        tag_name: v${{ github.event.inputs.tag }}
         files: ./target/release/currently-playing-spotify
