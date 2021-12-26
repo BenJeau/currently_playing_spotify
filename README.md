@@ -31,6 +31,15 @@ The periodic Websocket response is (where data is `null` if the user is not play
 }
 ```
 
+## Download
+
+Get it from GitHub releases or use curl from the terminal (and replace `VERSION` with the appropriate version):
+
+```sh
+curl -L https://github.com/BenJeau/currently_playing_spotify/releases/download/VERSION/currently_playing_spotify --output ./currently_playing_spotify
+chmod +x ./currently_playing_spotify
+```
+
 ## Spotify Credentials
 
 ### Client ID and Secret
