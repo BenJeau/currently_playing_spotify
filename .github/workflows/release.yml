@@ -28,12 +28,12 @@ jobs:
     - name: Build
       run: cargo build --release
     - name: Stripping binary
-      run: strip ./target/release/currently-playing-spotify
+      run: strip ./target/release/currently_playing_spotify
     - name: Compressing binary (UPX)
       uses: crazy-max/ghaction-upx@v1
       with:
         version: latest
-        files: ./target/release/currently-playing-spotify
+        files: ./target/release/currently_playing_spotify
         args: --best --lzma
     - name: Update and commit Cargo.toml with new version
       run: |
@@ -47,4 +47,4 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         tag_name: v${{ github.event.inputs.tag }}
-        files: ./target/release/currently-playing-spotify
+        files: ./target/release/currently_playing_spotify

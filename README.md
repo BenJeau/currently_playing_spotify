@@ -11,14 +11,25 @@ Call the binary with the required parameters to the binary, to learn more about 
 | `--interval` or `-i` | `INTERVAL_QUERY_SECS`   | No       | `2`       | Maximum interval in seconds which the Spotify API will be called                                                                       |
 | `--port` or `-p`     | `WEBSOCKET_PORT`        | No       | `8080`    | Websocket server port                                                                                                                  |
 | `--address` or `-a`  | `WEBSOCKET_ADDRESS`     | No       | `0.0.0.0` | Websocket server address                                                                                                               |
-| `--cors-origin`      | `CORS_ORIGIN`           | No       | `*`       | Set a single allow origin target, permissive if nothing is passed                                                                         |
+| `--cors-origin`      | `CORS_ORIGIN`           | No       | `*`       | Set a single allow origin target, permissive if nothing is passed                                                                      |
 | `--auth-code`        | `SPOTIFY_AUTH_CODE`     | Yes      | -         | Authentication code from the Spotify user taken from the Authentication authentication flow (learn more [below](#authentication-code)) |
 | `--client-id`        | `SPOTIFY_CLIENT_ID`     | Yes      | -         | Spotify application client id (learn more [below](#client-id-and-secret))                                                              |
 | `--client-secret`    | `SPOTIFY_CLIENT_SECRET` | Yes      | -         | Spotify application client secret (learn more [below](#client-id-and-secret))                                                          |
 
 ## Developing
 
-Have rust installed and run `cargo build` and run the corresponding binary in the `./target` folder with the appropriate parameters.
+Have rust installed and run `cargo run` with the appropriate parameters or environment variables (e.g. `cargo run -- --auth-code asdf...`).
+
+### Response
+
+The periodic Websocket response is (where data is `null` if the user is not playing anything or is an object from the [Currently Playing Spotify API](https://developer.spotify.com/documentation/web-api/reference/#/operations/get-the-users-currently-playing-track)):
+
+```json
+{
+  "data": null,
+  "fetched": "2021-12-26T17:23:38.412067Z"
+}
+```
 
 ## Spotify Credentials
 
