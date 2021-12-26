@@ -27,4 +27,8 @@ pub struct Opts {
     /// Websocket server address
     #[clap(short, long, env = "WEBSOCKET_ADDRESS", default_value = "0.0.0.0")]
     pub address: String,
+
+    /// Set a single allow origin target, permissive if nothing is passed
+    #[clap(long, env = "CORS_ORIGIN")]
+    pub cors_origin: Option<String>,
 }

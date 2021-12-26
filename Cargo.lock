@@ -209,13 +209,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "currently-playing-spotify"
+name = "currently_playing_spotify"
 version = "0.1.0"
 dependencies = [
  "axum",
  "chrono",
  "clap",
  "futures-util",
+ "http",
  "reqwest",
  "serde",
  "serde_json",
@@ -1246,7 +1247,6 @@ dependencies = [
  "tokio-util",
  "tower-layer",
  "tower-service",
- "tracing",
 ]
 
 [[package]]

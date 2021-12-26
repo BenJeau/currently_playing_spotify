@@ -1,7 +1,8 @@
 use axum::{routing::get, AddExtensionLayer, Router};
 use clap::StructOpt;
+use http::Method;
 use tokio::sync::watch;
-use tower_http::trace::{DefaultMakeSpan, TraceLayer};
+use tower_http::cors::{any, CorsLayer, Origin};
 use tracing::info;
 
 use crate::{
@@ -19,12 +20,6 @@ mod utils;
 
 #[tokio::main]
 async fn main() {
-    if std::env::var_os("RUST_LOG").is_none() {
-        std::env::set_var(
-            "RUST_LOG",
-            "currently-playing-spotify=debug,tower_http=debug",
-        )
-    }
     tracing_subscriber::fmt::init();
 
     let Opts {
@@ -34,6 +29,7 @@ async fn main() {
         client_secret,
         port,
         address,
+        cors_origin,
     } = Opts::parse();
 
     let (tx, rx) = watch::channel("".to_string());
@@ -42,16 +38,22 @@ async fn main() {
     tokio::task::spawn(query_periodically_spotify_api(interval, spotify_auth, tx));
     info!("Spawned background task querying Spotify's API");
 
+    let mut cors = CorsLayer::new().allow_methods(vec![Method::GET]);
+
+    if let Some(cors_origin) = cors_origin {
+        cors = cors.allow_origin(Origin::exact(cors_origin.parse().unwrap()));
+    } else {
+        cors = cors.allow_origin(any());
+    }
+
     let app = Router::new()
         .route("/ws", get(handler))
-        .layer(AddExtensionLayer::new(rx))
-        .layer(
-            TraceLayer::new_for_http()
-                .make_span_with(DefaultMakeSpan::default().include_headers(true)),
-        );
+        .layer(cors)
+        .layer(AddExtensionLayer::new(rx));
 
     let addr = format!("{}:{}", address, port).parse().unwrap();
-    tracing::debug!("listening on {}", addr);
+    info!("Listening on {}", addr);
+
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
         .await
