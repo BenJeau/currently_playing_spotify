@@ -6,7 +6,6 @@ use axum::{
     headers::UserAgent,
     response::IntoResponse,
 };
-use futures_util::StreamExt;
 use std::time::Instant;
 use tokio::{select, sync::watch::Receiver, time::interval};
 use tracing::{info, warn};
@@ -39,7 +38,7 @@ async fn handle_socket(
 
     while !close_stream {
         select! {
-            Some(Ok(msg)) = ws_stream.next() => {
+            Some(Ok(msg)) = ws_stream.recv() => {
                 match msg {
                     Message::Text(_) => {
                         warn!("Text messages are not supported");

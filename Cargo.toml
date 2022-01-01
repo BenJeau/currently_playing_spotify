@@ -6,16 +6,15 @@ edition = "2021"
 [dependencies]
 axum = { version = "0.4.3", features = ["ws", "headers"] }
 chrono = { version = "0.4.19", features = ["serde"] }
-clap = { version = "3.0.0-beta.7", features = ["derive", "env"] }
-futures-util = "0.3.18"
-http = "0.2.5"
-reqwest = { version = "0.11.7", features = ["json"] }
-serde = { version = "1.0.130", features = ["derive"] }
+clap = { version = "3.0.0", features = ["derive", "env"] }
+http = "0.2.6"
+reqwest = { version = "0.11.8", features = ["json"] }
+serde = { version = "1.0.132", features = ["derive"] }
 serde_json = "1.0.73"
 tracing = "0.1.29"
-tracing-subscriber = "0.3.4"
-tokio = { version = "1.15.0", default-features = false, features = ["io-util", "macros", "rt", "rt-multi-thread", "time", "sync"] }
-tower-http = { version = "0.2.0", features = ["fs", "cors"] }
+tracing-subscriber = "0.3.5"
+tokio = { version = "1.15.0", default-features = false, features = ["io-util", "macros", "rt", "rt-multi-thread", "sync"] }
+tower-http = { version = "0.2.0", features = ["cors"] }
 
 [profile.release]
 opt-level = 'z'     # Optimize for size.
