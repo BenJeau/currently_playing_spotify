@@ -1,6 +1,6 @@
 # currently_playing_spotify
 
-Simple Rust websocket proxy server using [axum](https://crates.io/crates/axum) to know what track the specified user is currently listening. Server caching is used keeping the latest song in memory to not overload the Spotify's REST API and the websocket API is available on port `8080`.
+Simple Rust WebSocket proxy server using [axum](https://crates.io/crates/axum) to know what track the specified user is currently listening to. Server caching is used to keep the latest song in memory to not overload Spotify's REST API and the WebSocket API is available on port `8080`.
 
 ## Usage
 
@@ -9,8 +9,8 @@ Call the binary with the required parameters to the binary, to learn more about 
 | Parameter name       | Environment name        | Required | Default   | Description                                                                                                                            |
 | -------------------- | ----------------------- | -------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `--interval` or `-i` | `INTERVAL_QUERY_SECS`   | No       | `2`       | Maximum interval in seconds which the Spotify API will be called                                                                       |
-| `--port` or `-p`     | `WEBSOCKET_PORT`        | No       | `8080`    | Websocket server port                                                                                                                  |
-| `--address` or `-a`  | `WEBSOCKET_ADDRESS`     | No       | `0.0.0.0` | Websocket server address                                                                                                               |
+| `--port` or `-p`     | `WEBSOCKET_PORT`        | No       | `8080`    | WebSocket server port                                                                                                                  |
+| `--address` or `-a`  | `WEBSOCKET_ADDRESS`     | No       | `0.0.0.0` | WebSocket server address                                                                                                               |
 | `--cors-origin`      | `CORS_ORIGIN`           | No       | `*`       | Set a single allow origin target, permissive if nothing is passed                                                                      |
 | `--auth-code`        | `SPOTIFY_AUTH_CODE`     | Yes      | -         | Authentication code from the Spotify user taken from the Authentication authentication flow (learn more [below](#authentication-code)) |
 | `--client-id`        | `SPOTIFY_CLIENT_ID`     | Yes      | -         | Spotify application client id (learn more [below](#client-id-and-secret))                                                              |
@@ -22,7 +22,7 @@ Have rust installed and run `cargo run` with the appropriate parameters or envir
 
 ### Response
 
-The periodic Websocket response is (where data is `null` if the user is not playing anything or is an object from the [Currently Playing Spotify API](https://developer.spotify.com/documentation/web-api/reference/#/operations/get-the-users-currently-playing-track)):
+The periodic WebSocket response is (where data is `null` if the user is not playing anything or is an object from the [Currently Playing Spotify API](https://developer.spotify.com/documentation/web-api/reference/#/operations/get-the-users-currently-playing-track)):
 
 ```json
 {
