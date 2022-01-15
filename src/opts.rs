@@ -2,7 +2,7 @@ use clap::Parser;
 
 /// Simple Rust websocket proxy server using Actix to know what track the specified user is currently listening
 #[derive(Parser, Debug)]
-#[clap(version = "0.1.0", author = "Benoît J. <benoit@jeaurond.dev>")]
+#[clap(version, author = "Benoît J. <benoit@jeaurond.dev>")]
 pub struct Opts {
     /// Maximum interval in seconds which the Spotify API will be called
     #[clap(short, long, env = "INTERVAL_QUERY_SECS", default_value = "2")]

@@ -210,7 +210,7 @@ dependencies = [
 
 [[package]]
 name = "currently_playing_spotify"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "axum",
  "chrono",
