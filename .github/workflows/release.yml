@@ -25,6 +25,9 @@ jobs:
           ~/.cargo/git/db/
           target/
         key: cargo-${{ hashFiles('**/Cargo.lock') }}
+    - name: Set Cargo.toml with new version
+      run: |
+        sed -i 's/^version.*/version = "${{ github.event.inputs.tag }}"/' ./Cargo.toml
     - name: Build
       run: cargo build --release
     - name: Stripping binary
@@ -37,7 +40,6 @@ jobs:
         args: --best --lzma
     - name: Update and commit Cargo.toml with new version
       run: |
-        sed -i 's/^version.*/version = "${{ github.event.inputs.tag }}"/' ./Cargo.toml
         git config --global user.name 'github_actions'
         git config --global user.email 'actions@github.com'
         git add Cargo.toml
