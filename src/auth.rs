@@ -70,7 +70,7 @@ impl SpotifyAuth {
                 let data = match data.json::<SpotifyAuthCodeResponse>().await {
                     Ok(auth) => auth,
                     Err(err) => {
-                        panic!("Invalid authorization code: {:?}", err);
+                        panic!("Invalid authorization code: {err:?}");
                     }
                 };
 
@@ -79,8 +79,8 @@ impl SpotifyAuth {
                 self.expires_in = data.expires_in;
                 self.fetched = Utc::now();
             }
-            Err(error) => {
-                error!("Error querying Spotify auth tokens API: {:?}", error);
+            Err(err) => {
+                error!("Error querying Spotify auth tokens API: {err:?}");
             }
         };
     }
@@ -108,14 +108,21 @@ impl SpotifyAuth {
 
         match response {
             Ok(data) => {
-                let data = data.json::<SpotifyAuthResponse>().await.unwrap();
+                let body = data.text().await.unwrap();
+
+                let data = match serde_json::from_str::<SpotifyAuthResponse>(&body) {
+                    Ok(auth) => auth,
+                    Err(err) => {
+                        panic!("Error parsing body. Error: {err:?}. Body: {body:?}");
+                    }
+                };
 
                 self.access_token = Some(data.access_token);
                 self.expires_in = data.expires_in;
                 self.fetched = Utc::now();
             }
-            Err(error) => {
-                error!("Error querying Spotify access token auth API: {:?}", error);
+            Err(err) => {
+                error!("Error querying Spotify access token auth API: {err:?}");
             }
         };
     }
@@ -133,7 +140,7 @@ impl SpotifyAuth {
 
         let response = reqwest::Client::new()
             .get("https://api.spotify.com/v1/me/player/currently-playing")
-            .header("Authorization", format!("Bearer {}", access_token))
+            .header("Authorization", format!("Bearer {access_token}"))
             .send()
             .await;
 
@@ -148,12 +155,9 @@ impl SpotifyAuth {
                     Ok(Song::new(None))
                 }
             },
-            Err(error) => {
-                error!(
-                    "Error querying Spotify currently playing track API: {:?}",
-                    error
-                );
-                Err(error)
+            Err(err) => {
+                error!("Error querying Spotify currently playing track API: {err:?}");
+                Err(err)
             }
         }
     }

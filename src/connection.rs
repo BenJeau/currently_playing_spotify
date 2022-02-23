@@ -17,7 +17,7 @@ pub async fn handler(
     user_agent: Option<TypedHeader<UserAgent>>,
     Extension(rx): Extension<Receiver<String>>,
 ) -> impl IntoResponse {
-    info!("Establishing connection: {:?}", user_agent);
+    info!("Establishing connection: {user_agent:?}");
 
     ws.on_upgrade(|socket| handle_socket(socket, user_agent, rx))
 }
@@ -27,7 +27,7 @@ async fn handle_socket(
     user_agent: Option<TypedHeader<UserAgent>>,
     mut rx: Receiver<String>,
 ) -> Result<(), axum::Error> {
-    info!("Connection upgraded to WS connection: {:?}", user_agent);
+    info!("Connection upgraded to WS connection: {user_agent:?}");
 
     let mut heartbeat = Instant::now();
     let mut heartbeat_interval = interval(config::HEARTBEAT_INTERVAL);
