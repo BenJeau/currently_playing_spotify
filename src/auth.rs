@@ -113,7 +113,8 @@ impl SpotifyAuth {
                 let data = match serde_json::from_str::<SpotifyAuthResponse>(&body) {
                     Ok(auth) => auth,
                     Err(err) => {
-                        panic!("Error parsing body. Error: {err:?}. Body: {body:?}");
+                        error!("Error parsing body. Error: {err:?}. Body: {body:?}");
+                        return;
                     }
                 };
 
