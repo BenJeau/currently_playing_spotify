@@ -1,8 +1,8 @@
-use axum::{routing::get, AddExtensionLayer, Router};
+use axum::{routing::get, Extension, Router};
 use clap::StructOpt;
 use http::Method;
 use tokio::sync::watch;
-use tower_http::cors::{Any, CorsLayer, Origin};
+use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 
 use crate::{
@@ -41,7 +41,7 @@ async fn main() {
     let mut cors = CorsLayer::new().allow_methods(vec![Method::GET]);
 
     if let Some(cors_origin) = cors_origin {
-        cors = cors.allow_origin(Origin::exact(cors_origin.parse().unwrap()));
+        cors = cors.allow_origin([cors_origin.parse().unwrap()]);
     } else {
         cors = cors.allow_origin(Any);
     }
@@ -49,7 +49,7 @@ async fn main() {
     let app = Router::new()
         .route("/ws", get(handler))
         .layer(cors)
-        .layer(AddExtensionLayer::new(rx));
+        .layer(Extension(rx));
 
     let addr = format!("{address}:{port}").parse().unwrap();
     info!("Listening on {addr}");

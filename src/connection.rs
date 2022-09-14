@@ -19,7 +19,9 @@ pub async fn handler(
 ) -> impl IntoResponse {
     info!("Establishing connection: {user_agent:?}");
 
-    ws.on_upgrade(|socket| handle_socket(socket, user_agent, rx))
+    ws.on_upgrade(|socket| async {
+        let _ = handle_socket(socket, user_agent, rx).await;
+    });
 }
 
 async fn handle_socket(

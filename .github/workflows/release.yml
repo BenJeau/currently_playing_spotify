@@ -30,8 +30,6 @@ jobs:
         sed -i 's/^version.*/version = "${{ github.event.inputs.tag }}"/' ./Cargo.toml
     - name: Build
       run: cargo build --release
-    - name: Stripping binary
-      run: strip ./target/release/currently_playing_spotify
     - name: Compressing binary (UPX)
       uses: crazy-max/ghaction-upx@v1
       with:
