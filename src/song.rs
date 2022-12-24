@@ -125,7 +125,7 @@ where
     D: Deserializer<'de>,
 {
     let mut images: Vec<Image> = Vec::deserialize(deserializer)?;
-    images.sort_by(|a, b| a.height.cmp(&b.height));
+    images.sort_by(|a, b| b.height.cmp(&a.height));
     Ok(images
         .get(0)
         .ok_or(de::Error::custom("external_urls does not exist"))?
