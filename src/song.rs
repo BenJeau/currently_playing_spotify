@@ -57,10 +57,10 @@ impl From<SongContentUnflatten> for SongContent {
 
 #[derive(Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct SongContentMetadata {
+    #[serde(rename(serialize = "type"))]
     pub currently_playing_type: String,
     pub is_playing: bool,
     pub progress_ms: i64,
-    pub timestamp: i64,
 }
 
 #[derive(Deserialize, Serialize, Clone, PartialEq, Eq)]
@@ -72,7 +72,6 @@ pub struct SongContentUnflatten {
 
 #[derive(Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct Item {
-    pub id: String,
     pub album: Album,
     pub artists: Vec<Artist>,
     pub duration_ms: i64,
@@ -83,8 +82,8 @@ pub struct Item {
 pub struct Album {
     pub id: String,
     #[serde(rename(deserialize = "images"))]
-    #[serde(deserialize_with = "extract_image_url")]
-    pub image_url: String,
+    #[serde(deserialize_with = "extract_image")]
+    pub image: String,
     pub name: String,
 }
 
@@ -101,7 +100,7 @@ pub struct Image {
     pub width: i64,
 }
 
-fn extract_image_url<'de, D>(deserializer: D) -> Result<String, D::Error>
+fn extract_image<'de, D>(deserializer: D) -> Result<String, D::Error>
 where
     D: Deserializer<'de>,
 {
