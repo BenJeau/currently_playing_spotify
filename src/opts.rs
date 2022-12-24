@@ -31,4 +31,8 @@ pub struct Opts {
     /// Set a single allow origin target, permissive if nothing is passed
     #[arg(long, env = "CORS_ORIGIN")]
     pub cors_origin: Option<String>,
+
+    /// Compacts the JSON response (removes many fields from the Spotify response)
+    #[arg(short, long, env = "COMPACT", default_value = "false")]
+    pub compact: bool,
 }

@@ -30,10 +30,11 @@ async fn main() {
         port,
         address,
         cors_origin,
+        compact,
     } = Opts::parse();
 
     let (tx, rx) = watch::channel("".to_string());
-    let spotify_auth = SpotifyAuth::new(auth_code, client_id, client_secret).await;
+    let spotify_auth = SpotifyAuth::new(auth_code, client_id, client_secret, compact).await;
 
     tokio::task::spawn(query_periodically_spotify_api(interval, spotify_auth, tx));
     info!("Spawned background task querying Spotify's API");

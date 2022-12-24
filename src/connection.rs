@@ -21,7 +21,7 @@ pub async fn handler(
 
     ws.on_upgrade(|socket| async {
         let _ = handle_socket(socket, user_agent, rx).await;
-    });
+    })
 }
 
 async fn handle_socket(

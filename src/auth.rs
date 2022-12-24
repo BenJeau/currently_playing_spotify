@@ -15,6 +15,7 @@ pub struct SpotifyAuth {
     access_token: Option<String>,
     client_id: String,
     client_secret: String,
+    compact: bool,
 }
 
 #[derive(Deserialize)]
@@ -31,7 +32,12 @@ struct SpotifyAuthResponse {
 }
 
 impl SpotifyAuth {
-    pub async fn new(auth_code: String, client_id: String, client_secret: String) -> SpotifyAuth {
+    pub async fn new(
+        auth_code: String,
+        client_id: String,
+        client_secret: String,
+        compact: bool,
+    ) -> SpotifyAuth {
         let mut auth = SpotifyAuth {
             auth_code,
             expires_in: 0,
@@ -40,6 +46,7 @@ impl SpotifyAuth {
             refresh_token: None,
             client_id,
             client_secret,
+            compact,
         };
 
         auth.get_auth_tokens().await;
@@ -122,14 +129,14 @@ impl SpotifyAuth {
         };
     }
 
-    async fn currently_playing_request(&self) -> Result<Song, reqwest::Error> {
+    async fn currently_playing_request(&self) -> reqwest::Result<Song> {
         info!("Querying Spotify currently playing track API");
 
         let access_token = match self.access_token.clone() {
             Some(token) => token,
             None => {
                 error!("Access token does not exist");
-                return Ok(Song::new(None));
+                return Ok(Song::new(None, self.compact));
             }
         };
 
@@ -137,24 +144,20 @@ impl SpotifyAuth {
             .get("https://api.spotify.com/v1/me/player/currently-playing")
             .header("Authorization", format!("Bearer {access_token}"))
             .send()
-            .await;
-
-        match response {
-            Ok(data) => match serde_json::from_str(&data.text().await.unwrap()) {
-                Ok(data) => {
-                    info!("User is currently playing music");
-                    Ok(Song::new(Some(data)))
-                }
-                _ => {
-                    info!("User NOT currently playing music");
-                    Ok(Song::new(None))
-                }
-            },
-            Err(err) => {
+            .await
+            .map_err(|err| {
                 error!("Error querying Spotify currently playing track API: {err:?}");
-                Err(err)
-            }
-        }
+                err
+            })?
+            .text()
+            .await
+            .map_err(|err| {
+                info!("User NOT currently playing music: {err}");
+            })
+            .map(Option::Some)
+            .unwrap_or(None);
+
+        Ok(Song::new(response, self.compact))
     }
 
     pub async fn query_currently_playing(&mut self) -> Option<Song> {

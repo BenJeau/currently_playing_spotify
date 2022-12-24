@@ -15,6 +15,7 @@ Call the binary with the required parameters to the binary, to learn more about 
 | `--auth-code`        | `SPOTIFY_AUTH_CODE`     | Yes      | -         | Authentication code from the Spotify user taken from the Authentication authentication flow (learn more [below](#authentication-code)) |
 | `--client-id`        | `SPOTIFY_CLIENT_ID`     | Yes      | -         | Spotify application client id (learn more [below](#client-id-and-secret))                                                              |
 | `--client-secret`    | `SPOTIFY_CLIENT_SECRET` | Yes      | -         | Spotify application client secret (learn more [below](#client-id-and-secret))                                                          |
+| `--compact`          | `COMPACT`               | No       | `false`   | Compacts the JSON response (removes many fields from the Spotify response)                                                             |
 
 ## Developing
 
@@ -22,7 +23,7 @@ Have rust installed and run `cargo run` with the appropriate parameters or envir
 
 ### Response
 
-The periodic WebSocket response is (where data is `null` if the user is not playing anything or is an object from the [Currently Playing Spotify API](https://developer.spotify.com/documentation/web-api/reference/#/operations/get-the-users-currently-playing-track)):
+The periodic WebSocket response is (where data is `null` if the user is not playing anything or is an object from the [Currently Playing Spotify API](https://developer.spotify.com/documentation/web-api/reference/#/operations/get-the-users-currently-playing-track) if compact is `false`, or if compact is `true` it is a subset of the fields from the Spotify API):
 
 ```json
 {
