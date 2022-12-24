@@ -30,6 +30,8 @@ jobs:
         sed -i 's/^version.*/version = "${{ github.event.inputs.tag }}"/' ./Cargo.toml
     - name: Build
       run: cargo build --release
+    - name: Save uncompressed binary
+      run: cp ./target/release/currently_playing_spotify ./target/release/currently_playing_spotify_uncompressed
     - name: Compressing binary (UPX)
       uses: crazy-max/ghaction-upx@v1
       with:
@@ -47,4 +49,6 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         tag_name: v${{ github.event.inputs.tag }}
-        files: ./target/release/currently_playing_spotify
+        files: |
+          ./target/release/currently_playing_spotify
+          ./target/release/currently_playing_spotify_uncompressed
