@@ -54,7 +54,11 @@ impl SpotifyAuth {
     async fn get_auth_tokens(&mut self) {
         info!("Querying Spotify auth tokens API");
 
-        let response = reqwest::Client::new()
+        let SpotifyAuthCodeResponse {
+            access_token,
+            expires_in,
+            refresh_token,
+        } = reqwest::Client::new()
             .post("https://accounts.spotify.com/api/token")
             .basic_auth(self.client_id.clone(), Some(self.client_secret.clone()))
             .form(&[
@@ -63,26 +67,16 @@ impl SpotifyAuth {
                 ("code", &self.auth_code),
             ])
             .send()
-            .await;
+            .await
+            .expect("Error querying Spotify auth tokens API")
+            .json::<SpotifyAuthCodeResponse>()
+            .await
+            .expect("Invalid authorization code");
 
-        match response {
-            Ok(data) => {
-                let data = match data.json::<SpotifyAuthCodeResponse>().await {
-                    Ok(auth) => auth,
-                    Err(err) => {
-                        panic!("Invalid authorization code: {err:?}");
-                    }
-                };
-
-                self.access_token = Some(data.access_token);
-                self.refresh_token = Some(data.refresh_token);
-                self.expires_in = data.expires_in;
-                self.fetched = Utc::now();
-            }
-            Err(err) => {
-                error!("Error querying Spotify auth tokens API: {err:?}");
-            }
-        };
+        self.access_token = Some(access_token);
+        self.refresh_token = Some(refresh_token);
+        self.expires_in = expires_in;
+        self.fetched = Utc::now();
     }
 
     async fn get_new_access_token(&mut self) {

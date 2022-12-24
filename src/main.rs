@@ -1,5 +1,5 @@
 use axum::{routing::get, Extension, Router};
-use clap::StructOpt;
+use clap::Parser;
 use http::Method;
 use tokio::sync::watch;
 use tower_http::cors::{Any, CorsLayer};
