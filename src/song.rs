@@ -72,6 +72,7 @@ pub struct SongContentUnflatten {
 
 #[derive(Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct Item {
+    pub id: String,
     pub album: Album,
     pub artists: Vec<Artist>,
     pub duration_ms: i64,
