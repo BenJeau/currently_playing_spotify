@@ -1,6 +1,6 @@
 FROM rust:1.77.0-alpine3.19 AS builder
 RUN apk update && apk upgrade --no-cache
-RUN apk add --no-cache musl-dev upx
+RUN apk add --no-cache musl-dev upx ca-certificates
 WORKDIR /app
 COPY ./src ./src
 COPY ./Cargo.toml .
@@ -10,6 +10,7 @@ RUN cargo build --release
 RUN upx --best --lzma /app/target/release/currently_playing_spotify
 
 FROM scratch
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=builder /app/target/release/currently_playing_spotify /
 
 CMD ["./currently_playing_spotify"]
