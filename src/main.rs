@@ -1,6 +1,5 @@
-use axum::{routing::get, Extension, Router};
+use axum::{http::Method, routing::get, Router};
 use clap::Parser;
-use http::Method;
 use tokio::sync::watch;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
@@ -14,9 +13,9 @@ use crate::{
 mod auth;
 mod config;
 mod connection;
+mod error;
 mod opts;
 mod song;
-mod utils;
 
 #[tokio::main]
 async fn main() {
@@ -24,9 +23,8 @@ async fn main() {
 
     let Opts {
         interval,
-        auth_code,
-        client_id,
-        client_secret,
+        username,
+        password,
         port,
         address,
         cors_origin,
@@ -34,7 +32,7 @@ async fn main() {
     } = Opts::parse();
 
     let (tx, rx) = watch::channel("".to_string());
-    let spotify_auth = SpotifyAuth::new(auth_code, client_id, client_secret, compact).await;
+    let spotify_auth = SpotifyAuth::new(&username, &password, compact).await;
 
     tokio::task::spawn(query_periodically_spotify_api(interval, spotify_auth, tx));
     info!("Spawned background task querying Spotify's API");
@@ -50,13 +48,12 @@ async fn main() {
     let app = Router::new()
         .route("/ws", get(handler))
         .layer(cors)
-        .layer(Extension(rx));
+        .with_state(rx);
 
-    let addr = format!("{address}:{port}").parse().unwrap();
+    let addr = format!("{address}:{port}");
     info!("Listening on {addr}");
 
-    axum::Server::bind(&addr)
-        .serve(app.into_make_service())
-        .await
-        .unwrap();
+    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+
+    axum::serve(listener, app).await.unwrap();
 }

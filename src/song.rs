@@ -1,43 +1,27 @@
-use chrono::{DateTime, Utc};
 use serde::{de, Deserialize, Deserializer, Serialize};
-use tracing::info;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use crate::error::Result;
 
 #[derive(Serialize, Clone, PartialEq, Eq)]
 pub struct Song {
-    data: Option<serde_json::Value>,
-    fetched: DateTime<Utc>,
+    pub data: Option<serde_json::Value>,
+    fetched: u128,
 }
 
 impl Song {
-    pub fn new(song_data: Option<String>, compact: bool) -> Song {
-        let data = match song_data {
-            Some(song_data) => {
-                if compact {
-                    match serde_json::from_str::<SongContent>(&song_data) {
-                        Ok(converted) => Some(serde_json::to_value(converted).unwrap()),
-                        Err(_) => None,
-                    }
-                } else {
-                    Some(serde_json::from_str(&song_data).unwrap())
-                }
-            }
-            None => None,
-        };
+    pub fn new(data: Option<serde_json::Value>) -> Result<Song> {
+        let now = SystemTime::now();
+        let since_the_epoch = now.duration_since(UNIX_EPOCH).expect("Time went backwards");
 
-        if data.is_some() {
-            info!("User is currently playing music");
-        } else {
-            info!("User NOT currently playing music");
-        }
-
-        Song {
+        Ok(Song {
             data,
-            fetched: Utc::now(),
-        }
+            fetched: since_the_epoch.as_millis(),
+        })
     }
 }
 
-#[derive(Deserialize, Serialize, Clone, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Clone, PartialEq)]
 #[serde(from = "SongContentUnflatten")]
 pub struct SongContent {
     #[serde(flatten)]
@@ -55,7 +39,7 @@ impl From<SongContentUnflatten> for SongContent {
     }
 }
 
-#[derive(Deserialize, Serialize, Clone, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct SongContentMetadata {
     #[serde(rename(serialize = "type"))]
     pub currently_playing_type: String,
@@ -63,14 +47,22 @@ pub struct SongContentMetadata {
     pub progress_ms: i64,
 }
 
-#[derive(Deserialize, Serialize, Clone, PartialEq, Eq)]
+// Ignores the progress_ms field to avoid sending a new message every time the progress changes
+impl PartialEq for SongContentMetadata {
+    fn eq(&self, other: &Self) -> bool {
+        self.currently_playing_type == other.currently_playing_type
+            && self.is_playing == other.is_playing
+    }
+}
+
+#[derive(Deserialize, Serialize, Clone, PartialEq)]
 pub struct SongContentUnflatten {
     #[serde(flatten)]
     pub metadata: SongContentMetadata,
     pub item: Item,
 }
 
-#[derive(Deserialize, Serialize, Clone, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Clone, PartialEq)]
 pub struct Item {
     pub id: String,
     pub album: Album,
@@ -79,7 +71,7 @@ pub struct Item {
     pub name: String,
 }
 
-#[derive(Deserialize, Serialize, Clone, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Clone, PartialEq)]
 pub struct Album {
     pub id: String,
     #[serde(rename(deserialize = "images"))]
@@ -88,20 +80,20 @@ pub struct Album {
     pub name: String,
 }
 
-#[derive(Deserialize, Serialize, Clone, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Clone, PartialEq)]
 pub struct Artist {
     pub id: String,
     pub name: String,
 }
 
-#[derive(Deserialize, Serialize, Clone, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Clone, PartialEq)]
 pub struct Image {
     pub height: i64,
     pub url: String,
     pub width: i64,
 }
 
-fn extract_image<'de, D>(deserializer: D) -> Result<String, D::Error>
+fn extract_image<'de, D>(deserializer: D) -> std::result::Result<String, D::Error>
 where
     D: Deserializer<'de>,
 {

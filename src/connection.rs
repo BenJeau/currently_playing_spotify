@@ -1,11 +1,11 @@
 use axum::{
     extract::{
         ws::{Message, WebSocket},
-        Extension, TypedHeader, WebSocketUpgrade,
+        State, WebSocketUpgrade,
     },
-    headers::UserAgent,
     response::IntoResponse,
 };
+use axum_extra::{headers::UserAgent, typed_header::TypedHeader};
 use std::time::Instant;
 use tokio::{select, sync::watch::Receiver, time::interval};
 use tracing::{info, warn};
@@ -15,7 +15,7 @@ use crate::config;
 pub async fn handler(
     ws: WebSocketUpgrade,
     user_agent: Option<TypedHeader<UserAgent>>,
-    Extension(rx): Extension<Receiver<String>>,
+    State(rx): State<Receiver<String>>,
 ) -> impl IntoResponse {
     info!("Establishing connection: {user_agent:?}");
 
@@ -35,16 +35,10 @@ async fn handle_socket(
     let mut heartbeat_interval = interval(config::HEARTBEAT_INTERVAL);
     let mut close_stream = false;
 
-    let data = rx.borrow().clone();
-    ws_stream.send(Message::Text(data)).await?;
-
     while !close_stream {
         select! {
             Some(Ok(msg)) = ws_stream.recv() => {
                 match msg {
-                    Message::Text(_) => {
-                        warn!("Text messages are not supported");
-                    }
                     Message::Ping(_) => {
                         heartbeat = Instant::now();
                         ws_stream.send(Message::Pong(vec![])).await?;
@@ -55,8 +49,8 @@ async fn handle_socket(
                     Message::Close(_) => {
                         close_stream = true;
                     }
-                    Message::Binary(_) => {
-                        warn!("Binary messages are not supported");
+                    Message::Text(_) | Message::Binary(_) => {
+                        warn!("Text and binary messages are not supported");
                     }
                 }
             }

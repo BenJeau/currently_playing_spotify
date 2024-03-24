@@ -1,24 +1,24 @@
 [package]
+edition = "2021"
 name = "currently_playing_spotify"
 version = "0.2.9"
-edition = "2021"
 
 [dependencies]
-axum = { version = "0.6.1", features = ["ws", "headers"] }
-chrono = { version = "0.4.23", features = ["serde"] }
-clap = { version = "4.0.32", features = ["derive", "env"] }
-http = "0.2.8"
-reqwest = { version = "0.11.11", features = ["json"] }
-serde = { version = "1.0.151", features = ["derive"] }
-serde_json = "1.0.91"
-tracing = "0.1.37"
-tracing-subscriber = "0.3.16"
-tokio = { version = "1.23.0", default-features = false, features = ["io-util", "macros", "rt", "rt-multi-thread", "sync"] }
-tower-http = { version = "0.3.5", features = ["cors"] }
+axum = { version = "0.7.4", features = ["ws"] }
+axum-extra = { version = "0.9.3", features = ["typed-header"] }
+clap = { version = "4.5.3", features = ["derive", "env"] }
+http = "0.2.9"
+librespot = { git = "https://github.com/librespot-org/librespot", branch = "dev", default-features = false }
+serde = { version = "1.0.197", features = ["derive"] }
+serde_json = "1.0.114"
+tokio = { version = "1.36.0", default-features = false, features = ["io-util", "macros", "rt", "rt-multi-thread", "sync"] }
+tower-http = { version = "0.5.2", features = ["cors"] }
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
 
 [profile.release]
-opt-level = 'z'     # Optimize for size.
-lto = true          # Enable Link Time Optimization
-codegen-units = 1   # Reduce number of codegen units to increase optimizations.
-panic = 'abort'     # Abort on panic
-strip = "debuginfo"
+codegen-units = 1 # Reduce number of codegen units to increase optimizations.
+lto = true        # Enable Link Time Optimization
+opt-level = 'z'   # Optimize for size.
+panic = 'abort'   # Abort on panic
+strip = true
